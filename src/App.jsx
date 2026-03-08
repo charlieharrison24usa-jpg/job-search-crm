@@ -15,43 +15,110 @@ import {
   FileUp,
 } from "lucide-react";
 // Simple local UI components (replacing shadcn/ui)
-const Card = ({ children, className="" }) => <div className={`border rounded-xl bg-white ${className}`}>{children}</div>;
+const Card = ({ children, className="" }) => (
+  <div
+    className={`border border-violet-300/15 rounded-xl bg-[#140b23]/80 text-violet-100 shadow-[0_20px_70px_-45px_rgba(168,85,247,0.85)] backdrop-blur ${className}`}
+  >
+    {children}
+  </div>
+);
 const CardContent = ({ children, className="" }) => <div className={className}>{children}</div>;
-const CardHeader = ({ children, className="" }) => <div className={`p-4 border-b ${className}`}>{children}</div>;
-const CardTitle = ({ children }) => <h3 className="text-lg font-semibold">{children}</h3>;
+const CardHeader = ({ children, className="" }) => <div className={`p-4 border-b border-violet-300/15 ${className}`}>{children}</div>;
+const CardTitle = ({ children }) => <h3 className="text-lg font-semibold tracking-tight text-violet-50">{children}</h3>;
 
-const Button = ({ children, className="", onClick, variant="default", ...props }) => {
-  const base = "px-3 py-2 text-sm rounded-lg border";
-  const style = variant === "outline" ? "bg-white" : "bg-black text-white";
+const Button = ({ children, className="", onClick, variant="default", size="default", asChild=false, ...props }) => {
+  const base = "inline-flex items-center justify-center gap-2 px-3 py-2 text-sm rounded-lg border transition-all duration-200 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/60";
+  const style =
+    variant === "outline"
+      ? "bg-[#110818] text-violet-100 border-violet-300/25 hover:bg-[#1b0e2b] hover:border-violet-300/45 hover:shadow-[0_0_32px_-20px_rgba(192,132,252,0.95)]"
+      : "btn-glow bg-gradient-to-r from-violet-600 to-fuchsia-600 border-transparent text-white hover:brightness-110 shadow-[0_10px_35px_-18px_rgba(216,180,254,0.9)]";
+  const sizeClass = size === "icon" ? "h-10 w-10 p-0" : "";
+  const classes = `${base} ${style} ${sizeClass} ${className}`;
+
+  if (asChild && React.isValidElement(children)) {
+    return React.cloneElement(children, {
+      className: `${classes} ${children.props.className || ""}`,
+    });
+  }
+
   return (
-    <button onClick={onClick} className={`${base} ${style} ${className}`} {...props}>
+    <button onClick={onClick} className={classes} {...props}>
       {children}
     </button>
   );
 };
 
 const Input = (props) => (
-  <input {...props} className={`border rounded-lg px-3 py-2 text-sm w-full ${props.className || ""}`} />
+  <input
+    {...props}
+    className={`border border-violet-300/25 rounded-lg px-3 py-2 text-sm w-full bg-[#0f0918] text-violet-100 placeholder:text-violet-300/55 focus:outline-none focus:ring-2 focus:ring-violet-400/50 ${props.className || ""}`}
+  />
 );
 
 const Textarea = (props) => (
-  <textarea {...props} className={`border rounded-lg px-3 py-2 text-sm w-full ${props.className || ""}`} />
+  <textarea
+    {...props}
+    className={`border border-violet-300/25 rounded-lg px-3 py-2 text-sm w-full bg-[#0f0918] text-violet-100 placeholder:text-violet-300/55 focus:outline-none focus:ring-2 focus:ring-violet-400/50 ${props.className || ""}`}
+  />
 );
 
-const Badge = ({ children, className="" }) => (
-  <span className={`text-xs px-2 py-1 border rounded ${className}`}>{children}</span>
-);
+const Badge = ({ children, className="", tone="neutral" }) => {
+  const toneMap = {
+    neutral: "border-violet-300/30 text-violet-200 bg-violet-600/10",
+    brand: "border-violet-300/45 text-violet-100 bg-violet-500/20",
+    success: "border-emerald-300/45 text-emerald-100 bg-emerald-500/20",
+    warn: "border-amber-300/45 text-amber-100 bg-amber-500/20",
+    danger: "border-rose-300/45 text-rose-100 bg-rose-500/20",
+    info: "border-sky-300/45 text-sky-100 bg-sky-500/20",
+  };
+  return (
+    <span className={`text-xs px-2 py-1 border rounded ${toneMap[tone] || toneMap.neutral} ${className}`}>{children}</span>
+  );
+};
 
-const Dialog = ({ open, children }) => (open ? <div className="fixed inset-0 flex items-center justify-center bg-black/40">{children}</div> : null);
-const DialogContent = ({ children, className="" }) => <div className={`bg-white p-6 max-w-md w-full rounded-xl ${className}`}>{children}</div>;
+const Dialog = ({ open, children }) => (open ? <div className="fixed inset-0 flex items-center justify-center bg-black/70 p-4 z-50">{children}</div> : null);
+const DialogContent = ({ children, className="" }) => (
+  <div className={`bg-[#130a21] border border-violet-300/20 p-6 max-w-md w-full rounded-xl shadow-2xl fade-up ${className}`}>{children}</div>
+);
 const DialogHeader = ({ children }) => <div className="mb-3">{children}</div>;
-const DialogTitle = ({ children }) => <h2 className="text-lg font-semibold">{children}</h2>;
+const DialogTitle = ({ children }) => <h2 className="text-lg font-semibold text-violet-50">{children}</h2>;
 
 // Simple Tabs implementation
-function Tabs({ children }) { return <div>{children}</div>; }
-function TabsList({ children }) { return <div className="flex gap-2 mb-4">{children}</div>; }
-function TabsTrigger({ children, onClick }) { return <button onClick={onClick} className="px-3 py-2 border rounded">{children}</button>; }
-function TabsContent({ children }) { return <div>{children}</div>; }
+const TabsContext = React.createContext({ value: "", setValue: () => {} });
+function Tabs({ children, defaultValue="", className="", ...props }) {
+  const [value, setValue] = useState(defaultValue);
+  return (
+    <TabsContext.Provider value={{ value, setValue }}>
+      <div className={className} {...props}>{children}</div>
+    </TabsContext.Provider>
+  );
+}
+function TabsList({ children, className="", ...props }) {
+  return <div className={`flex gap-2 mb-4 bg-[#140a22]/90 border border-violet-300/15 p-1.5 overflow-x-auto ${className}`} {...props}>{children}</div>;
+}
+function TabsTrigger({ children, value, className="", ...props }) {
+  const { value: activeValue, setValue } = React.useContext(TabsContext);
+  const isActive = activeValue === value;
+  return (
+    <button
+      onClick={() => setValue(value)}
+      aria-pressed={isActive}
+      className={`px-4 py-2 border rounded-xl text-sm transition-all ${
+        isActive
+          ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white border-transparent shadow-md"
+          : "bg-transparent border-transparent text-violet-200 hover:bg-violet-600/20"
+      } ${className}`}
+      {...props}
+    >
+      {children}
+    </button>
+  );
+}
+function TabsContent({ children, value, className="", ...props }) {
+  const { value: activeValue } = React.useContext(TabsContext);
+  if (activeValue !== value) return null;
+  return <div className={className} {...props}>{children}</div>;
+}
 
 const STORAGE_KEY = "charlie-job-search-crm-v5";
 
@@ -200,6 +267,34 @@ function getWarmIntroScore(count) {
   return { label: "❗ Build Network", tone: "outline", description: "No warm contacts yet. This is a networking gap." };
 }
 
+function getStageTone(stage) {
+  const map = {
+    Target: "neutral",
+    Researching: "info",
+    Applied: "brand",
+    "Outreach Sent": "brand",
+    Connected: "success",
+    "Intro Call": "info",
+    Interviewing: "warn",
+    "Final Round": "warn",
+    Offer: "success",
+    Closed: "danger",
+  };
+  return map[stage] || "neutral";
+}
+
+function getConnectionTone(connectionType) {
+  const map = {
+    Cold: "neutral",
+    LinkedIn: "brand",
+    "Ex-AWS": "info",
+    Ivey: "warn",
+    Recruiter: "success",
+    Other: "neutral",
+  };
+  return map[connectionType] || "neutral";
+}
+
 function generateOutreachMessage(contact) {
   const firstName = (contact.contactName || "there").split(" ")[0];
   const company = contact.company || "your company";
@@ -220,21 +315,48 @@ function downloadFile(filename, content, mimeType) {
 
 function MetricCard({ title, value, subtitle, icon: Icon }) {
   return (
-    <Card className="rounded-2xl shadow-sm">
+    <Card className="rounded-2xl transition-transform duration-300 hover:-translate-y-1">
       <CardContent className="p-5">
+        <div className="h-1.5 w-14 rounded-full bg-gradient-to-r from-violet-400 to-fuchsia-400 mb-4 opacity-70" />
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-sm text-slate-500">{title}</p>
-            <p className="text-3xl font-semibold mt-1">{value}</p>
-            <p className="text-xs text-slate-500 mt-2">{subtitle}</p>
+            <p className="text-sm text-violet-200/70">{title}</p>
+            <p className="text-3xl font-semibold mt-1 text-violet-50"><AnimatedNumber value={value} /></p>
+            <p className="text-xs text-violet-200/60 mt-2">{subtitle}</p>
           </div>
-          <div className="p-3 rounded-2xl bg-slate-100">
-            <Icon className="h-5 w-5" />
+          <div className="p-3 rounded-2xl bg-violet-600/20 border border-violet-300/20">
+            <Icon className="h-5 w-5 text-violet-100" />
           </div>
         </div>
       </CardContent>
     </Card>
   );
+}
+
+function AnimatedNumber({ value, duration=700 }) {
+  const [display, setDisplay] = useState(value);
+  const [previousValue, setPreviousValue] = useState(value);
+
+  useEffect(() => {
+    const start = performance.now();
+    const from = Number(previousValue) || 0;
+    const to = Number(value) || 0;
+    let frame = 0;
+
+    const tick = (now) => {
+      const progress = Math.min((now - start) / duration, 1);
+      const eased = 1 - ((1 - progress) ** 3);
+      const next = Math.round(from + ((to - from) * eased));
+      setDisplay(next);
+      if (progress < 1) frame = window.requestAnimationFrame(tick);
+      else setPreviousValue(to);
+    };
+
+    frame = window.requestAnimationFrame(tick);
+    return () => window.cancelAnimationFrame(frame);
+  }, [value, duration, previousValue]);
+
+  return <span>{display}</span>;
 }
 
 export default function JobSearchMiniCRM() {
@@ -433,26 +555,46 @@ export default function JobSearchMiniCRM() {
     const connectedCount = contacts.filter((c) => c.connectionType === "LinkedIn").length;
     const warmCompanies = companyMap.filter((c) => c.contacts.length > 0).length;
     const activeOutreach = contacts.filter((c) => ["Outreach Sent", "Connected", "Intro Call", "Interviewing", "Final Round", "Offer"].includes(c.stage)).length;
+    const stageCounts = stageOptions.reduce((acc, stage) => {
+      acc[stage] = contacts.filter((contact) => contact.stage === stage).length;
+      return acc;
+    }, {});
     return {
       totalContacts: contacts.length,
       connectedCount,
       warmCompanies,
       targetCompanies: companyMap.length,
       activeOutreach,
+      stageCounts,
     };
   }, [contacts, companyMap]);
+  const topStages = Object.entries(stats.stageCounts)
+    .filter(([, count]) => count > 0)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 4);
+  const conversionPct = stats.totalContacts ? Math.round((stats.activeOutreach / stats.totalContacts) * 100) : 0;
+  const warmthPct = stats.targetCompanies ? Math.round((stats.warmCompanies / stats.targetCompanies) * 100) : 0;
+  const statCards = [
+    { title: "Contacts", value: stats.totalContacts, subtitle: "All contacts in your CRM", icon: Users },
+    { title: "LinkedIn Imports", value: stats.connectedCount, subtitle: "Warm contacts from LinkedIn", icon: Sparkles },
+    { title: "Warm Companies", value: stats.warmCompanies, subtitle: "Targets where you know someone", icon: Building2 },
+    { title: "Target Companies", value: stats.targetCompanies, subtitle: "Seed list plus additions", icon: MessageSquare },
+    { title: "Active Outreach", value: stats.activeOutreach, subtitle: "Contacts beyond pure research", icon: MessageSquare },
+  ];
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
-      <div className="max-w-7xl mx-auto p-6 md:p-8 space-y-6">
-        <Card className="rounded-2xl border-amber-200 bg-amber-50 shadow-sm">
+    <div className="min-h-screen bg-[#08050f] text-violet-100 relative overflow-hidden">
+      <div className="pointer-events-none absolute -top-20 -left-20 h-72 w-72 rounded-full bg-violet-600/20 blur-3xl" />
+      <div className="pointer-events-none absolute top-20 right-0 h-80 w-80 rounded-full bg-fuchsia-600/20 blur-3xl" />
+      <div className="max-w-7xl mx-auto p-4 sm:p-6 md:p-8 space-y-6 relative z-10">
+        <Card className="rounded-2xl border-violet-300/25 bg-gradient-to-r from-violet-800/35 to-fuchsia-800/20 fade-up">
           <CardContent className="p-4 md:p-5">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
               <div className="flex items-start gap-3">
                 <ShieldAlert className="h-5 w-5 mt-0.5" />
                 <div>
                   <p className="font-medium">Local-only storage</p>
-                  <p className="text-sm text-slate-600 mt-1">
+                  <p className="text-sm text-violet-100/75 mt-1">
                     Your CRM is saved only in this browser on this device. Export a JSON backup regularly before clearing browser data or switching machines.
                   </p>
                 </div>
@@ -469,15 +611,18 @@ export default function JobSearchMiniCRM() {
                 </label>
               </div>
             </div>
-            {backupMessage ? <p className="text-sm text-slate-600 mt-3">{backupMessage}</p> : null}
+            {backupMessage ? <p className="text-sm text-violet-100/80 mt-3">{backupMessage}</p> : null}
           </CardContent>
         </Card>
 
-        <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+        <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 fade-up" style={{ animationDelay: "80ms" }}>
           <div>
-            <p className="text-sm uppercase tracking-[0.2em] text-slate-500">Charlie Harrison</p>
-            <h1 className="text-3xl md:text-4xl font-semibold mt-2">Job Search Mini CRM</h1>
-            <p className="text-slate-600 mt-2 max-w-3xl">
+            <p className="inline-flex items-center px-3 py-1 rounded-full border border-violet-300/25 bg-violet-900/30 text-xs uppercase tracking-[0.18em] text-violet-200 mb-3">
+              Personal Pipeline
+            </p>
+            <p className="text-sm uppercase tracking-[0.2em] text-violet-300/80">Charlie Harrison</p>
+            <h1 className="text-3xl md:text-4xl font-semibold mt-2 text-violet-50">Job Search Mini CRM</h1>
+            <p className="text-violet-100/75 mt-2 max-w-3xl">
               Track warm intros, target companies, and outreach messages across your NYC and SF search.
             </p>
           </div>
@@ -498,22 +643,51 @@ export default function JobSearchMiniCRM() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
-          <MetricCard title="Contacts" value={stats.totalContacts} subtitle="All contacts in your CRM" icon={Users} />
-          <MetricCard title="LinkedIn Imports" value={stats.connectedCount} subtitle="Warm contacts from LinkedIn" icon={Sparkles} />
-          <MetricCard title="Warm Companies" value={stats.warmCompanies} subtitle="Targets where you know someone" icon={Building2} />
-          <MetricCard title="Target Companies" value={stats.targetCompanies} subtitle="Seed list plus additions" icon={MessageSquare} />
-          <MetricCard title="Active Outreach" value={stats.activeOutreach} subtitle="Contacts beyond pure research" icon={MessageSquare} />
+          {statCards.map((item, index) => (
+            <div key={item.title} className="fade-up" style={{ animationDelay: `${100 + (index * 60)}ms` }}>
+              <MetricCard title={item.title} value={item.value} subtitle={item.subtitle} icon={item.icon} />
+            </div>
+          ))}
         </div>
 
+        <Card className="rounded-2xl fade-up" style={{ animationDelay: "220ms" }}>
+          <CardContent className="p-5 grid grid-cols-1 xl:grid-cols-3 gap-5 items-start">
+            <div className="space-y-3">
+              <p className="text-xs uppercase tracking-[0.18em] text-violet-200/75">Pipeline Health</p>
+              <p className="text-3xl font-semibold text-violet-50">{conversionPct}%</p>
+              <p className="text-sm text-violet-200/70">of contacts are in active outreach stages</p>
+              <div className="h-2 rounded-full bg-violet-900/60 overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-violet-400 to-fuchsia-400" style={{ width: `${conversionPct}%` }} />
+              </div>
+            </div>
+            <div className="space-y-3">
+              <p className="text-xs uppercase tracking-[0.18em] text-violet-200/75">Warmth Coverage</p>
+              <p className="text-3xl font-semibold text-violet-50">{warmthPct}%</p>
+              <p className="text-sm text-violet-200/70">of target companies have at least one connection</p>
+              <div className="h-2 rounded-full bg-violet-900/60 overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-sky-400 to-violet-400" style={{ width: `${warmthPct}%` }} />
+              </div>
+            </div>
+            <div className="space-y-3">
+              <p className="text-xs uppercase tracking-[0.18em] text-violet-200/75">Top Stages</p>
+              <div className="flex flex-wrap gap-2">
+                {topStages.length ? topStages.map(([stage, count]) => (
+                  <Badge key={stage} tone={getStageTone(stage)} className="rounded-xl">{stage}: {count}</Badge>
+                )) : <p className="text-sm text-violet-200/70">No stage data yet.</p>}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         <Tabs defaultValue="companies" className="space-y-6">
-          <TabsList className="rounded-2xl">
+          <TabsList className="rounded-2xl fade-up" style={{ animationDelay: "140ms" }}>
             <TabsTrigger value="companies">Warm Intro Map</TabsTrigger>
             <TabsTrigger value="contacts">Contacts</TabsTrigger>
             <TabsTrigger value="deploy">Deploy Notes</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="companies" className="space-y-6">
-            <Card className="rounded-2xl shadow-sm">
+          <TabsContent value="companies" className="space-y-6 fade-up tab-switch" style={{ animationDelay: "180ms" }}>
+            <Card className="rounded-2xl">
               <CardContent className="p-4">
                 <Input
                   value={companySearch}
@@ -531,26 +705,31 @@ export default function JobSearchMiniCRM() {
                   return (
                     <Card
                       key={company.name}
-                      className={`rounded-2xl shadow-sm cursor-pointer transition-all ${selectedCompany === company.name ? "ring-2 ring-slate-900" : "hover:shadow-md"}`}
+                      className={`rounded-2xl cursor-pointer transition-all duration-300 ${selectedCompany === company.name ? "ring-2 ring-violet-300/80 bg-violet-700/25" : "hover:-translate-y-0.5 hover:bg-violet-800/20"}`}
                       onClick={() => setSelectedCompany(company.name)}
                     >
                       <CardContent className="p-5 space-y-3">
                         <div className="flex items-start justify-between gap-3">
                           <div>
                             <h3 className="text-xl font-semibold">{company.name}</h3>
-                            <p className="text-sm text-slate-500 mt-1">{company.contacts.length} warm contact{company.contacts.length === 1 ? "" : "s"}</p>
+                            <p className="text-sm text-violet-200/70 mt-1">{company.contacts.length} warm contact{company.contacts.length === 1 ? "" : "s"}</p>
                           </div>
-                          <Badge variant={score.tone} className="rounded-xl">{score.label}</Badge>
+                          <Badge tone="brand" className="rounded-xl">{score.label}</Badge>
                         </div>
-                        <p className="text-sm text-slate-600">{score.description}</p>
+                        <p className="text-sm text-violet-100/75">{score.description}</p>
                       </CardContent>
                     </Card>
                   );
                 })}
+                {!filteredCompanies.length ? (
+                  <Card className="rounded-2xl md:col-span-2">
+                    <CardContent className="p-6 text-sm text-violet-200/75">No companies match that search.</CardContent>
+                  </Card>
+                ) : null}
               </div>
 
               <div>
-                <Card className="rounded-2xl shadow-sm sticky top-6">
+                <Card className="rounded-2xl sticky top-6">
                   <CardHeader>
                     <CardTitle>{selectedCompanyData ? selectedCompanyData.name : "Select a Company"}</CardTitle>
                   </CardHeader>
@@ -558,20 +737,20 @@ export default function JobSearchMiniCRM() {
                     {selectedCompanyData ? (
                       <div className="space-y-4">
                         <div>
-                          <Badge variant={getWarmIntroScore(selectedCompanyData.contacts.length).tone} className="rounded-xl">
+                          <Badge tone="brand" className="rounded-xl">
                             {getWarmIntroScore(selectedCompanyData.contacts.length).label}
                           </Badge>
                         </div>
                         <div className="space-y-3">
                           {selectedCompanyData.contacts.length ? selectedCompanyData.contacts.map((contact) => (
-                            <div key={contact.id} className="p-3 rounded-2xl bg-slate-100 space-y-2">
+                            <div key={contact.id} className="p-3 rounded-2xl bg-violet-900/25 border border-violet-300/15 space-y-2">
                               <div>
                                 <p className="font-medium text-sm">{contact.contactName}</p>
-                                <p className="text-xs text-slate-500 mt-1">{contact.title || "No title saved"}</p>
+                                <p className="text-xs text-violet-200/70 mt-1">{contact.title || "No title saved"}</p>
                               </div>
                               <div className="flex flex-wrap gap-2">
-                                <Badge variant="secondary" className="rounded-xl">{contact.connectionType}</Badge>
-                                <Badge variant="outline" className="rounded-xl">{contact.stage}</Badge>
+                                <Badge tone={getConnectionTone(contact.connectionType)} className="rounded-xl">{contact.connectionType}</Badge>
+                                <Badge tone={getStageTone(contact.stage)} className="rounded-xl">{contact.stage}</Badge>
                               </div>
                               <div className="flex gap-2">
                                 <Button variant="outline" className="w-full rounded-2xl" onClick={() => copyMessage(contact)}>
@@ -583,12 +762,12 @@ export default function JobSearchMiniCRM() {
                               </div>
                             </div>
                           )) : (
-                            <p className="text-sm text-slate-500">No warm contacts yet. Build this company intentionally.</p>
+                            <p className="text-sm text-violet-200/70">No warm contacts yet. Build this company intentionally.</p>
                           )}
                         </div>
                       </div>
                     ) : (
-                      <p className="text-sm text-slate-500">Select a company to see your warm intro strength and copy outreach messages.</p>
+                      <p className="text-sm text-violet-200/70">Select a company to see your warm intro strength and copy outreach messages.</p>
                     )}
                   </CardContent>
                 </Card>
@@ -596,11 +775,11 @@ export default function JobSearchMiniCRM() {
             </div>
           </TabsContent>
 
-          <TabsContent value="contacts" className="space-y-6">
-            <Card className="rounded-2xl shadow-sm">
+          <TabsContent value="contacts" className="space-y-6 fade-up tab-switch" style={{ animationDelay: "180ms" }}>
+            <Card className="rounded-2xl">
               <CardContent className="p-4">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-violet-300/55" />
                   <Input
                     placeholder="Search contacts, companies, stages..."
                     value={search}
@@ -613,16 +792,16 @@ export default function JobSearchMiniCRM() {
 
             <div className="grid gap-4">
               {filteredContacts.map((contact) => (
-                <Card key={contact.id} className="rounded-2xl shadow-sm">
+                <Card key={contact.id} className="rounded-2xl transition-all duration-300 hover:bg-violet-800/20">
                   <CardContent className="p-4">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                       <div>
                         <p className="font-semibold">{contact.contactName}</p>
-                        <p className="text-sm text-slate-500">{contact.title || "No title saved"}</p>
+                        <p className="text-sm text-violet-200/70">{contact.title || "No title saved"}</p>
                         <p className="text-sm mt-1">{contact.company}</p>
                         <div className="flex flex-wrap gap-2 mt-2">
-                          <Badge variant="secondary" className="rounded-xl">{contact.connectionType}</Badge>
-                          <Badge variant="outline" className="rounded-xl">{contact.stage}</Badge>
+                          <Badge tone={getConnectionTone(contact.connectionType)} className="rounded-xl">{contact.connectionType}</Badge>
+                          <Badge tone={getStageTone(contact.stage)} className="rounded-xl">{contact.stage}</Badge>
                         </div>
                       </div>
                       <div className="flex gap-2">
@@ -645,29 +824,36 @@ export default function JobSearchMiniCRM() {
                   </CardContent>
                 </Card>
               ))}
+              {!filteredContacts.length ? (
+                <Card className="rounded-2xl">
+                  <CardContent className="p-6 text-sm text-violet-200/75">
+                    No contacts found for that query.
+                  </CardContent>
+                </Card>
+              ) : null}
             </div>
           </TabsContent>
 
-          <TabsContent value="deploy">
-            <Card className="rounded-2xl shadow-sm">
+          <TabsContent value="deploy" className="fade-up tab-switch" style={{ animationDelay: "180ms" }}>
+            <Card className="rounded-2xl">
               <CardHeader>
                 <CardTitle>Deploy checklist for Vercel</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4 text-sm text-slate-600 leading-6">
+              <CardContent className="space-y-4 text-sm text-violet-100/75 leading-6">
                 <div>
-                  <p className="font-medium text-slate-900">1. Keep this app in one main browser</p>
+                  <p className="font-medium text-violet-50">1. Keep this app in one main browser</p>
                   <p>Since data is stored locally, treat one browser on one machine as your source of truth.</p>
                 </div>
                 <div>
-                  <p className="font-medium text-slate-900">2. Export JSON every few days</p>
+                  <p className="font-medium text-violet-50">2. Export JSON every few days</p>
                   <p>Save your backup file to iCloud Drive, Dropbox, or Google Drive before making major changes.</p>
                 </div>
                 <div>
-                  <p className="font-medium text-slate-900">3. Deploy through GitHub + Vercel</p>
+                  <p className="font-medium text-violet-50">3. Deploy through GitHub + Vercel</p>
                   <p>Push the code to GitHub, import the repo into Vercel, and let Vercel handle each new deployment.</p>
                 </div>
                 <div>
-                  <p className="font-medium text-slate-900">4. Upgrade only when you feel pain</p>
+                  <p className="font-medium text-violet-50">4. Upgrade only when you feel pain</p>
                   <p>When local-only storage becomes limiting, move just the data layer to a backend instead of rebuilding the app.</p>
                 </div>
               </CardContent>
@@ -709,7 +895,7 @@ export default function JobSearchMiniCRM() {
                 <select
                   value={form.connectionType}
                   onChange={(e) => setForm((prev) => ({ ...prev, connectionType: e.target.value }))}
-                  className="h-10 rounded-2xl border border-input bg-background px-3 py-2 text-sm"
+                  className="h-10 rounded-2xl border border-violet-300/25 bg-[#0f0918] px-3 py-2 text-sm text-violet-100 focus:outline-none focus:ring-2 focus:ring-violet-400/50"
                 >
                   {connectionTypeOptions.map((option) => (
                     <option key={option} value={option}>{option}</option>
@@ -718,7 +904,7 @@ export default function JobSearchMiniCRM() {
                 <select
                   value={form.stage}
                   onChange={(e) => setForm((prev) => ({ ...prev, stage: e.target.value }))}
-                  className="h-10 rounded-2xl border border-input bg-background px-3 py-2 text-sm"
+                  className="h-10 rounded-2xl border border-violet-300/25 bg-[#0f0918] px-3 py-2 text-sm text-violet-100 focus:outline-none focus:ring-2 focus:ring-violet-400/50"
                 >
                   {stageOptions.map((option) => (
                     <option key={option} value={option}>{option}</option>
