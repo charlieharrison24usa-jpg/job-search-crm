@@ -11,6 +11,8 @@ import {
   MessageSquare,
   Sparkles,
   Pencil,
+  ChevronLeft,
+  ChevronRight,
   ShieldAlert,
   FileUp,
 } from "lucide-react";
@@ -152,18 +154,7 @@ const targetCompanySeed = [
   "Together AI",
 ];
 
-const stageOptions = [
-  "Target",
-  "Researching",
-  "Applied",
-  "Outreach Sent",
-  "Connected",
-  "Intro Call",
-  "Interviewing",
-  "Final Round",
-  "Offer",
-  "Closed",
-];
+const stageOptions = ["Not Contacted", "Contacted", "Meeting Scheduled", "Meeting Held", "Closed Won", "Closed Lost"];
 
 const connectionTypeOptions = ["Cold", "LinkedIn", "Ex-AWS", "Ivey", "Recruiter", "Other"];
 
@@ -173,7 +164,7 @@ const emptyForm = {
   title: "",
   connectionType: "Cold",
   linkedinUrl: "",
-  stage: "Target",
+  stage: "Not Contacted",
   notes: "",
 };
 
@@ -253,7 +244,7 @@ function extractLinkedInConnections(rows, existingContacts) {
       title: row["Position"] || row["Title"] || "",
       connectionType: "LinkedIn",
       linkedinUrl: row["URL"] || row["Profile URL"] || "",
-      stage: "Connected",
+      stage: "Contacted",
       notes: "Imported from LinkedIn connections export.",
       createdAt: new Date().toISOString(),
     });
@@ -271,18 +262,33 @@ function getWarmIntroScore(count) {
 
 function getStageTone(stage) {
   const map = {
-    Target: "neutral",
-    Researching: "info",
-    Applied: "brand",
-    "Outreach Sent": "brand",
-    Connected: "success",
-    "Intro Call": "info",
-    Interviewing: "warn",
-    "Final Round": "warn",
-    Offer: "success",
-    Closed: "danger",
+    "Not Contacted": "neutral",
+    Contacted: "brand",
+    "Meeting Scheduled": "info",
+    "Meeting Held": "success",
+    "Closed Won": "success",
+    "Closed Lost": "danger",
   };
   return map[stage] || "neutral";
+}
+
+function normalizeStage(stage = "") {
+  const trimmed = String(stage || "").trim();
+  if (stageOptions.includes(trimmed)) return trimmed;
+
+  const legacyMap = {
+    Target: "Not Contacted",
+    Researching: "Not Contacted",
+    Applied: "Not Contacted",
+    "Outreach Sent": "Contacted",
+    Connected: "Contacted",
+    "Intro Call": "Meeting Scheduled",
+    Interviewing: "Meeting Held",
+    "Final Round": "Meeting Held",
+    Offer: "Meeting Held",
+    Closed: "Closed Lost",
+  };
+  return legacyMap[trimmed] || "Not Contacted";
 }
 
 function getConnectionTone(connectionType) {
@@ -303,6 +309,12 @@ function generateOutreachMessage(contact) {
   const title = contact.title ? ` and noticed you're a ${contact.title}` : "";
 
   return `Hi ${firstName} — hope you're doing well. I'm currently exploring enterprise sales / partnerships opportunities in NYC and SF, and ${company} is high on my target list. I came across your profile${title}. Would you be open to a quick chat about your experience there and any advice on where I should focus?`;
+}
+
+function moveStage(currentStage, direction = 1) {
+  const idx = stageOptions.indexOf(normalizeStage(currentStage));
+  const nextIdx = Math.min(stageOptions.length - 1, Math.max(0, idx + direction));
+  return stageOptions[nextIdx];
 }
 
 function downloadFile(filename, content, mimeType) {
@@ -384,7 +396,12 @@ export default function JobSearchMiniCRM() {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       try {
-        setContacts(JSON.parse(saved));
+        const parsed = JSON.parse(saved);
+        setContacts(
+          Array.isArray(parsed)
+            ? parsed.map((contact) => ({ ...contact, stage: normalizeStage(contact.stage) }))
+            : []
+        );
       } catch {
         setContacts([]);
       }
@@ -426,7 +443,7 @@ export default function JobSearchMiniCRM() {
       title: contact.title || "",
       connectionType: contact.connectionType || "Cold",
       linkedinUrl: contact.linkedinUrl || "",
-      stage: contact.stage || "Target",
+      stage: normalizeStage(contact.stage),
       notes: contact.notes || "",
     });
     setIsDialogOpen(true);
@@ -462,7 +479,7 @@ export default function JobSearchMiniCRM() {
       try {
         const parsed = JSON.parse(String(e.target?.result || "[]"));
         if (!Array.isArray(parsed)) throw new Error("Invalid format");
-        setContacts(parsed);
+        setContacts(parsed.map((contact) => ({ ...contact, stage: normalizeStage(contact.stage) })));
         setBackupMessage(`Backup restored with ${parsed.length} contacts.`);
       } catch {
         alert("Could not import backup. Please use a JSON export from this app.");
@@ -505,6 +522,7 @@ export default function JobSearchMiniCRM() {
                 ...contact,
                 ...form,
                 company: normalizedCompany,
+                stage: normalizeStage(form.stage),
               }
             : contact
         )
@@ -515,6 +533,7 @@ export default function JobSearchMiniCRM() {
         id: crypto.randomUUID(),
         ...form,
         company: normalizedCompany,
+        stage: normalizeStage(form.stage),
         createdAt: new Date().toISOString(),
       };
       setContacts((prev) => [newContact, ...prev]);
@@ -545,6 +564,10 @@ export default function JobSearchMiniCRM() {
       return next;
     });
     setBackupMessage("Contact deleted.");
+  }
+
+  function updateContactStage(id, stage) {
+    setContacts((prev) => prev.map((contact) => (contact.id === id ? { ...contact, stage: normalizeStage(stage) } : contact)));
   }
 
   function openAiDialog(contact) {
@@ -633,9 +656,9 @@ export default function JobSearchMiniCRM() {
   const stats = useMemo(() => {
     const connectedCount = contacts.filter((c) => c.connectionType === "LinkedIn").length;
     const warmCompanies = companyMap.filter((c) => c.contacts.length > 0).length;
-    const activeOutreach = contacts.filter((c) => ["Outreach Sent", "Connected", "Intro Call", "Interviewing", "Final Round", "Offer"].includes(c.stage)).length;
+    const activeOutreach = contacts.filter((c) => ["Contacted", "Meeting Scheduled", "Meeting Held"].includes(normalizeStage(c.stage))).length;
     const stageCounts = stageOptions.reduce((acc, stage) => {
-      acc[stage] = contacts.filter((contact) => contact.stage === stage).length;
+      acc[stage] = contacts.filter((contact) => normalizeStage(contact.stage) === stage).length;
       return acc;
     }, {});
     return {
@@ -831,6 +854,27 @@ export default function JobSearchMiniCRM() {
                                 <Badge tone={getConnectionTone(contact.connectionType)} className="rounded-xl">{contact.connectionType}</Badge>
                                 <Badge tone={getStageTone(contact.stage)} className="rounded-xl">{contact.stage}</Badge>
                               </div>
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  className="rounded-2xl"
+                                  onClick={() => updateContactStage(contact.id, moveStage(contact.stage, -1))}
+                                  disabled={normalizeStage(contact.stage) === stageOptions[0]}
+                                >
+                                  <ChevronLeft className="h-4 w-4" />
+                                </Button>
+                                <p className="text-xs text-violet-200/80">Move through pipeline stage</p>
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  className="rounded-2xl"
+                                  onClick={() => updateContactStage(contact.id, moveStage(contact.stage, 1))}
+                                  disabled={normalizeStage(contact.stage) === stageOptions[stageOptions.length - 1]}
+                                >
+                                  <ChevronRight className="h-4 w-4" />
+                                </Button>
+                              </div>
                               <div className="flex gap-2">
                                 <Button variant="outline" className="w-full rounded-2xl" onClick={() => copyMessage(contact)}>
                                   <MessageSquare className="h-4 w-4 mr-2" /> {copiedMessageId === contact.id ? "Copied" : "Copy Outreach Message"}
@@ -892,6 +936,27 @@ export default function JobSearchMiniCRM() {
                         <div className="flex flex-wrap gap-2 mt-2">
                           <Badge tone={getConnectionTone(contact.connectionType)} className="rounded-xl">{contact.connectionType}</Badge>
                           <Badge tone={getStageTone(contact.stage)} className="rounded-xl">{contact.stage}</Badge>
+                        </div>
+                        <div className="flex items-center gap-2 mt-3">
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="rounded-2xl"
+                            onClick={() => updateContactStage(contact.id, moveStage(contact.stage, -1))}
+                            disabled={normalizeStage(contact.stage) === stageOptions[0]}
+                          >
+                            <ChevronLeft className="h-4 w-4" />
+                          </Button>
+                          <p className="text-xs text-violet-200/80">Move through pipeline stage</p>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="rounded-2xl"
+                            onClick={() => updateContactStage(contact.id, moveStage(contact.stage, 1))}
+                            disabled={normalizeStage(contact.stage) === stageOptions[stageOptions.length - 1]}
+                          >
+                            <ChevronRight className="h-4 w-4" />
+                          </Button>
                         </div>
                       </div>
                       <div className="flex gap-2">
