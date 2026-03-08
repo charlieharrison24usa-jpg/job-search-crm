@@ -15,9 +15,10 @@ import {
   FileUp,
 } from "lucide-react";
 // Simple local UI components (replacing shadcn/ui)
-const Card = ({ children, className="" }) => (
+const Card = ({ children, className="", ...props }) => (
   <div
     className={`border border-violet-300/15 rounded-xl bg-[#140b23]/80 text-violet-100 shadow-[0_20px_70px_-45px_rgba(168,85,247,0.85)] backdrop-blur ${className}`}
+    {...props}
   >
     {children}
   </div>
