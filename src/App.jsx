@@ -122,6 +122,7 @@ function TabsContent({ children, value, className="", ...props }) {
 }
 
 const STORAGE_KEY = "charlie-job-search-crm-v5";
+const AI_MESSAGES_KEY = "charlie-job-search-crm-ai-messages-v1";
 
 const targetCompanySeed = [
   "Databricks",
@@ -370,6 +371,14 @@ export default function JobSearchMiniCRM() {
   const [copiedMessageId, setCopiedMessageId] = useState("");
   const [editingId, setEditingId] = useState("");
   const [backupMessage, setBackupMessage] = useState("");
+  const [aiMessages, setAiMessages] = useState({});
+  const [isAiDialogOpen, setIsAiDialogOpen] = useState(false);
+  const [aiContact, setAiContact] = useState(null);
+  const [aiTone, setAiTone] = useState("Warm and concise");
+  const [aiInstructions, setAiInstructions] = useState("");
+  const [aiDraft, setAiDraft] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState("");
 
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -385,6 +394,23 @@ export default function JobSearchMiniCRM() {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(contacts));
   }, [contacts]);
+
+  useEffect(() => {
+    const savedMessages = localStorage.getItem(AI_MESSAGES_KEY);
+    if (!savedMessages) return;
+    try {
+      const parsed = JSON.parse(savedMessages);
+      if (parsed && typeof parsed === "object") {
+        setAiMessages(parsed);
+      }
+    } catch {
+      setAiMessages({});
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(AI_MESSAGES_KEY, JSON.stringify(aiMessages));
+  }, [aiMessages]);
 
   function openAddDialog() {
     setEditingId("");
@@ -501,7 +527,7 @@ export default function JobSearchMiniCRM() {
   }
 
   async function copyMessage(contact) {
-    const message = generateOutreachMessage(contact);
+    const message = aiMessages[contact.id] || generateOutreachMessage(contact);
     try {
       await navigator.clipboard.writeText(message);
       setCopiedMessageId(contact.id);
@@ -513,7 +539,59 @@ export default function JobSearchMiniCRM() {
 
   function deleteContact(id) {
     setContacts((prev) => prev.filter((c) => c.id !== id));
+    setAiMessages((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
     setBackupMessage("Contact deleted.");
+  }
+
+  function openAiDialog(contact) {
+    const existing = aiMessages[contact.id] || generateOutreachMessage(contact);
+    setAiContact(contact);
+    setAiDraft(existing);
+    setAiInstructions("");
+    setAiError("");
+    setIsAiDialogOpen(true);
+  }
+
+  async function generateAiMessage() {
+    if (!aiContact) return;
+    setAiLoading(true);
+    setAiError("");
+    try {
+      const response = await fetch("/api/generate-message", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contact: aiContact,
+          baselineMessage: generateOutreachMessage(aiContact),
+          tone: aiTone,
+          userInstructions: aiInstructions,
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.error || "Could not generate AI message.");
+      }
+      if (!data?.message) {
+        throw new Error("AI response did not include a message.");
+      }
+      setAiDraft(data.message);
+    } catch (error) {
+      setAiError(error.message || "Could not generate AI message.");
+    } finally {
+      setAiLoading(false);
+    }
+  }
+
+  function saveAiMessage() {
+    if (!aiContact) return;
+    setAiMessages((prev) => ({ ...prev, [aiContact.id]: aiDraft.trim() || generateOutreachMessage(aiContact) }));
+    setBackupMessage(`AI message saved for ${aiContact.contactName}.`);
+    setIsAiDialogOpen(false);
   }
 
   const filteredContacts = useMemo(() => {
@@ -757,10 +835,16 @@ export default function JobSearchMiniCRM() {
                                 <Button variant="outline" className="w-full rounded-2xl" onClick={() => copyMessage(contact)}>
                                   <MessageSquare className="h-4 w-4 mr-2" /> {copiedMessageId === contact.id ? "Copied" : "Copy Outreach Message"}
                                 </Button>
+                                <Button variant="outline" className="rounded-2xl" onClick={() => openAiDialog(contact)}>
+                                  <Sparkles className="h-4 w-4" />
+                                </Button>
                                 <Button variant="outline" size="icon" className="rounded-2xl" onClick={() => openEditDialog(contact)}>
                                   <Pencil className="h-4 w-4" />
                                 </Button>
                               </div>
+                              {aiMessages[contact.id] ? (
+                                <p className="text-xs text-violet-200/70">AI-personalized message saved for this contact.</p>
+                              ) : null}
                             </div>
                           )) : (
                             <p className="text-sm text-violet-200/70">No warm contacts yet. Build this company intentionally.</p>
@@ -809,6 +893,9 @@ export default function JobSearchMiniCRM() {
                         <Button variant="outline" className="rounded-2xl" onClick={() => copyMessage(contact)}>
                           <MessageSquare className="h-4 w-4 mr-2" /> {copiedMessageId === contact.id ? "Copied" : "Copy Message"}
                         </Button>
+                        <Button variant="outline" className="rounded-2xl" onClick={() => openAiDialog(contact)}>
+                          <Sparkles className="h-4 w-4 mr-2" /> AI Edit
+                        </Button>
                         <Button variant="outline" size="icon" className="rounded-2xl" onClick={() => openEditDialog(contact)}>
                           <Pencil className="h-4 w-4" />
                         </Button>
@@ -822,6 +909,9 @@ export default function JobSearchMiniCRM() {
                         </Button>
                       </div>
                     </div>
+                    {aiMessages[contact.id] ? (
+                      <p className="text-xs text-violet-200/70 mt-3">This contact has a saved AI-customized message.</p>
+                    ) : null}
                   </CardContent>
                 </Card>
               ))}
@@ -923,6 +1013,76 @@ export default function JobSearchMiniCRM() {
                 <Save className="h-4 w-4 mr-2" /> {editingId ? "Save Changes" : "Save Contact"}
               </Button>
             </div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={isAiDialogOpen} onOpenChange={setIsAiDialogOpen}>
+          <DialogContent className="rounded-3xl max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>AI Message Editor</DialogTitle>
+            </DialogHeader>
+            {aiContact ? (
+              <div className="space-y-3">
+                <p className="text-sm text-violet-200/80">
+                  Editing message for <span className="text-violet-100 font-medium">{aiContact.contactName}</span> at{" "}
+                  <span className="text-violet-100 font-medium">{aiContact.company}</span>.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <select
+                    value={aiTone}
+                    onChange={(e) => setAiTone(e.target.value)}
+                    className="h-10 rounded-2xl border border-violet-300/25 bg-[#0f0918] px-3 py-2 text-sm text-violet-100 focus:outline-none focus:ring-2 focus:ring-violet-400/50"
+                  >
+                    <option value="Warm and concise">Warm and concise</option>
+                    <option value="Highly professional">Highly professional</option>
+                    <option value="Confident and direct">Confident and direct</option>
+                    <option value="Friendly and casual">Friendly and casual</option>
+                  </select>
+                  <Button variant="outline" className="rounded-2xl" onClick={generateAiMessage} disabled={aiLoading}>
+                    <Sparkles className="h-4 w-4 mr-2" /> {aiLoading ? "Generating..." : "Regenerate with AI"}
+                  </Button>
+                </div>
+                <Textarea
+                  value={aiInstructions}
+                  onChange={(e) => setAiInstructions(e.target.value)}
+                  placeholder="Optional instructions: mention shared AWS background, ask for 15 minutes next week, keep under 90 words..."
+                  className="rounded-2xl"
+                  rows={3}
+                />
+                <Textarea
+                  value={aiDraft}
+                  onChange={(e) => setAiDraft(e.target.value)}
+                  className="rounded-2xl"
+                  rows={8}
+                />
+                {aiError ? <p className="text-sm text-rose-300">{aiError}</p> : null}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                  <Button
+                    variant="outline"
+                    className="rounded-2xl"
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(aiDraft);
+                        if (aiContact) {
+                          setCopiedMessageId(aiContact.id);
+                          window.setTimeout(() => setCopiedMessageId(""), 2000);
+                        }
+                      } catch {
+                        alert("Could not copy message.");
+                      }
+                    }}
+                  >
+                    <MessageSquare className="h-4 w-4 mr-2" /> Copy Draft
+                  </Button>
+                  <Button variant="outline" className="rounded-2xl" onClick={() => setIsAiDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button className="rounded-2xl" onClick={saveAiMessage}>
+                    <Save className="h-4 w-4 mr-2" /> Save Message
+                  </Button>
+                </div>
+              </div>
+            ) : null}
           </DialogContent>
         </Dialog>
       </div>

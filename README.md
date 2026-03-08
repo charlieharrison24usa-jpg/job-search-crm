@@ -1,16 +1,35 @@
-# React + Vite
+# Job Search CRM
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A local-first React + Vite CRM for tracking target companies, contacts, and outreach.
 
-Currently, two official plugins are available:
+## Run Locally
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+```bash
+npm install
+npm run dev
+```
 
-## React Compiler
+## AI Message Editing
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+This app now includes an in-app AI Message Editor per contact.
 
-## Expanding the ESLint configuration
+### Required environment variable
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Set this on your deployment platform:
+
+- `OPENAI_API_KEY`
+
+### Local development note
+
+The AI endpoint is implemented as a serverless function at `api/generate-message.js`.
+When using plain `npm run dev` (Vite only), that `/api` route is not served.
+
+To test AI generation locally, use a platform runtime that supports serverless routes (for example, Vercel dev), or deploy to Vercel and test there.
+
+## Deploy (Vercel)
+
+1. Push your repo to GitHub.
+2. Import the repo in Vercel.
+3. Add environment variable `OPENAI_API_KEY` in Vercel project settings.
+4. Deploy.
+
