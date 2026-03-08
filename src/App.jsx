@@ -551,7 +551,7 @@ export default function JobSearchMiniCRM() {
     const existing = aiMessages[contact.id] || generateOutreachMessage(contact);
     setAiContact(contact);
     setAiDraft(existing);
-    setAiInstructions("");
+    setAiInstructions(`Personalize this for ${contact.contactName}. Mention shared context and ask for a short call.`);
     setAiError("");
     setIsAiDialogOpen(true);
   }
@@ -835,8 +835,13 @@ export default function JobSearchMiniCRM() {
                                 <Button variant="outline" className="w-full rounded-2xl" onClick={() => copyMessage(contact)}>
                                   <MessageSquare className="h-4 w-4 mr-2" /> {copiedMessageId === contact.id ? "Copied" : "Copy Outreach Message"}
                                 </Button>
-                                <Button variant="outline" className="rounded-2xl" onClick={() => openAiDialog(contact)}>
-                                  <Sparkles className="h-4 w-4" />
+                                <Button
+                                  variant="outline"
+                                  className="rounded-2xl"
+                                  onClick={() => openAiDialog(contact)}
+                                  title="Personalize message"
+                                >
+                                  <Sparkles className="h-4 w-4" /> Personalize
                                 </Button>
                                 <Button variant="outline" size="icon" className="rounded-2xl" onClick={() => openEditDialog(contact)}>
                                   <Pencil className="h-4 w-4" />
@@ -894,7 +899,7 @@ export default function JobSearchMiniCRM() {
                           <MessageSquare className="h-4 w-4 mr-2" /> {copiedMessageId === contact.id ? "Copied" : "Copy Message"}
                         </Button>
                         <Button variant="outline" className="rounded-2xl" onClick={() => openAiDialog(contact)}>
-                          <Sparkles className="h-4 w-4 mr-2" /> AI Edit
+                          <Sparkles className="h-4 w-4 mr-2" /> Personalize
                         </Button>
                         <Button variant="outline" size="icon" className="rounded-2xl" onClick={() => openEditDialog(contact)}>
                           <Pencil className="h-4 w-4" />
@@ -1027,6 +1032,9 @@ export default function JobSearchMiniCRM() {
                   Editing message for <span className="text-violet-100 font-medium">{aiContact.contactName}</span> at{" "}
                   <span className="text-violet-100 font-medium">{aiContact.company}</span>.
                 </p>
+                <p className="text-xs text-violet-200/70">
+                  Write a prompt below and generate a personalized draft, then edit or save it.
+                </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <select
                     value={aiTone}
@@ -1039,13 +1047,13 @@ export default function JobSearchMiniCRM() {
                     <option value="Friendly and casual">Friendly and casual</option>
                   </select>
                   <Button variant="outline" className="rounded-2xl" onClick={generateAiMessage} disabled={aiLoading}>
-                    <Sparkles className="h-4 w-4 mr-2" /> {aiLoading ? "Generating..." : "Regenerate with AI"}
+                    <Sparkles className="h-4 w-4 mr-2" /> {aiLoading ? "Generating..." : "Generate Personalized Draft"}
                   </Button>
                 </div>
                 <Textarea
                   value={aiInstructions}
                   onChange={(e) => setAiInstructions(e.target.value)}
-                  placeholder="Optional instructions: mention shared AWS background, ask for 15 minutes next week, keep under 90 words..."
+                  placeholder="Prompt: mention shared AWS background, ask for 15 minutes next week, keep under 90 words..."
                   className="rounded-2xl"
                   rows={3}
                 />
